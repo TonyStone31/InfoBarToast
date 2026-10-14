@@ -25,9 +25,9 @@ type
     Toast: TToast;
     UndoToastButton: TButton;
     procedure ErrorBarButtonClick(Sender: TObject);
-    procedure FormBarAnswer(Sender: TObject; Answer: TModalResult);
+    procedure FormBarAnswer(Sender: TObject; const Key: string; Answer: TModalResult);
     procedure FormBarButtonClick(Sender: TObject);
-    procedure MemoBarAnswer(Sender: TObject; Answer: TModalResult);
+    procedure MemoBarAnswer(Sender: TObject; const Key: string; Answer: TModalResult);
     procedure MemoBarButtonClick(Sender: TObject);
     procedure ToastAction(Sender: TObject);
     procedure UndoToastButtonClick(Sender: TObject);
@@ -48,7 +48,7 @@ begin
     [mrYes, '&Reload', mrNo, '&Keep mine']);
 end;
 
-procedure TDemoForm.FormBarAnswer(Sender: TObject; Answer: TModalResult);
+procedure TDemoForm.FormBarAnswer(Sender: TObject; const Key: string; Answer: TModalResult);
 begin
   case Answer of
     mrYes: Toast.Show('Reloaded.');
@@ -58,22 +58,22 @@ end;
 
 procedure TDemoForm.MemoBarButtonClick(Sender: TObject);
 begin
-  MemoBar.Edge := ieTop;
-  MemoBar.Show('This bar lies on the memo only. Drag the splitter and it follows.', mtInformation, [mbOK, mbHelp]);
+  MemoBar.Show('This bar lies on the memo only. Drag the splitter and it follows.', mtInformation,
+    [mbOK, mbHelp], 'info');
 end;
 
+// shown with the other one up, it stacks above it: errors come first
 procedure TDemoForm.ErrorBarButtonClick(Sender: TObject);
 begin
-  MemoBar.Edge := ieBottom;
-  MemoBar.Show('Could not save notes.md: the disk is full.', mtError, [mbRetry, mbCancel]);
+  MemoBar.Show('Could not save notes.md: the disk is full.', mtError, [mbRetry, mbCancel], 'error');
 end;
 
-procedure TDemoForm.MemoBarAnswer(Sender: TObject; Answer: TModalResult);
+procedure TDemoForm.MemoBarAnswer(Sender: TObject; const Key: string; Answer: TModalResult);
 begin
   // Help answers mrNone and leaves the bar up
   if Answer = mrNone then Toast.Show('Help was asked for.')
   else
-    Toast.Show('Answered.');
+    Toast.Show('The ' + Key + ' bar was answered.');
 end;
 
 procedure TDemoForm.ToastAction(Sender: TObject);

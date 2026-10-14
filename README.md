@@ -12,21 +12,31 @@ Two non-visual Lazarus components, plain LCL, for Linux, Windows and macOS.
 ## TInfoBar
 
 ```pascal
-InfoBar1.Show('Load the new version of notes.md?', mtConfirmation, [mbYes, mbNo]);
+InfoBar1.Show('Load the new version of notes.md?', mtConfirmation, [mbYes, mbNo], 'reload');
 
 // QuestionDlg style, for your own captions
 InfoBar1.ShowQuestion('notes.md was changed by another program.', mtWarning,
-  [mrYes, '&Reload', mrNo, '&Keep mine']);
+  [mrYes, '&Reload', mrNo, '&Keep mine'], 'reload');
+
+procedure TForm1.InfoBar1Answer(Sender: TObject; const Key: string; Answer: TModalResult);
 ```
 
-`OnAnswer` receives the `ModalResult` that MessageDlg would have returned.
-A button click hides the bar, except Help, which passes `mrNone` and leaves
-it up. The close button passes `mrClose`.
+`OnAnswer` receives the message's key and the `ModalResult` that MessageDlg
+would have returned. A button click takes the message away, except Help,
+which passes `mrNone` and leaves it up. The close button passes `mrClose`. The buttons
+have no Alt+letter accelerators, as in LibreOffice's info bars, so a bar that
+stays up never takes a key from the window.
 
-`Control` is the control the bar is placed on; leave it empty for the form.
-The bar gets that control's width and moves with it when the window or a
-splitter moves. `Edge` is `ieTop` or `ieBottom`. While the bar is shown it
-covers that edge of the control; other controls are not moved.
+Several messages stack, as in browsers and LibreOffice: errors first, then
+warnings, then the rest, up to `MaxVisible` (3). The others wait, and the
+last strip shows how many. `MaxVisible := 1` shows one at a time. Showing a
+message under a key that is already up replaces it instead of adding
+another. `Has(Key)`, `Hide(Key)`, `Hide` and `Count` manage what is up.
+
+`Control` is the control the bars are placed on; leave it empty for the
+form. They get that control's width and move with it when the window or a
+splitter moves. `Edge` is `ieTop` or `ieBottom`. While shown they cover that
+edge of the control; other controls are not moved.
 
 ## TToast
 

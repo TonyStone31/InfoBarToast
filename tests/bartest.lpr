@@ -24,7 +24,8 @@ type
   TRecorder = class
     Answers: TStringList;
     Actions: integer;
-    procedure Answered(Sender: TObject; Answer: TModalResult);
+    LastKey: string;
+    procedure Answered(Sender: TObject; const Key: string; Answer: TModalResult);
     procedure Acted(Sender: TObject);
   end;
 
@@ -36,9 +37,10 @@ var
   Rec: TRecorder;
   Failures: integer = 0;
 
-  procedure TRecorder.Answered(Sender: TObject; Answer: TModalResult);
+  procedure TRecorder.Answered(Sender: TObject; const Key: string; Answer: TModalResult);
   begin
     Answers.Add(IntToStr(Answer));
+    LastKey := Key;
   end;
 
   procedure TRecorder.Acted(Sender: TObject);
@@ -68,14 +70,40 @@ var
     end;
   end;
 
-  // The strip a bar or toast put on the form, found by its class.
+  // The visible strip a bar or toast put on the form, the topmost one.
   function Strip(const AClassName: string): TWinControl;
   var
     I: integer;
   begin
     Result := nil;
     for I := 0 to Form.ControlCount - 1 do
-      if Form.Controls[I].ClassName = AClassName then Exit(TWinControl(Form.Controls[I]));
+      if (Form.Controls[I].ClassName = AClassName) and Form.Controls[I].Visible and ((Result = nil) or (Form.Controls[I].Top < Result.Top)) then
+        Result := TWinControl(Form.Controls[I]);
+  end;
+
+  // The visible info bar strips, top to bottom, by the text they show.
+  function Strips: string;
+  var
+    I, J: integer;
+    L: TStringList;
+  begin
+    L := TStringList.Create;
+    try
+      for I := 0 to Form.ControlCount - 1 do
+        if (Form.Controls[I].ClassName = 'TInfoBarStrip') and Form.Controls[I].Visible then
+          L.AddObject(Format('%.5d', [Form.Controls[I].Top]), Form.Controls[I]);
+      L.Sort;
+      Result := '';
+      for I := 0 to L.Count - 1 do
+        for J := 0 to TWinControl(L.Objects[I]).ControlCount - 1 do
+          if TWinControl(L.Objects[I]).Controls[J] is TButton then
+          begin
+            Result := Result + TWinControl(L.Objects[I]).Controls[J].Caption + '|';
+            Break;
+          end;
+    finally
+      L.Free;
+    end;
   end;
 
   // The strip's button with this caption, as a user sees it.
@@ -142,7 +170,7 @@ begin
   Check('covers the form''s width', (Strip('TInfoBarStrip') <> nil) and (Strip('TInfoBarStrip').Width = Form.ClientWidth),
     IntToStr(Strip('TInfoBarStrip').Width) + ' of ' + IntToStr(Form.ClientWidth));
   Check('lies at the top', Strip('TInfoBarStrip').Top = 0, IntToStr(Strip('TInfoBarStrip').Top));
-  Check('Yes and No, in that order', Captions = '&Yes|&No|', Captions);
+  Check('Yes and No, in that order', Captions = 'Yes|No|', Captions);
   Press('Yes');
   Check('Yes answers mrYes', LastAnswer = IntToStr(mrYes), LastAnswer);
   Check('answering hides it', not Bar.Showing);
@@ -150,7 +178,7 @@ begin
   // QuestionDlg's buttons: own captions, and a default one
   Bar.ShowQuestion('notes.md changed on disk.', mtWarning, [mrYes, '&Reload', mrNo, '&Keep mine', mrCancel]);
   Settle;
-  Check('own captions', Captions = '&Reload|&Keep mine|Cancel|', Captions);
+  Check('own captions', Captions = 'Reload|Keep mine|Cancel|', Captions);
   Press('Keep mine');
   Check('Keep mine answers mrNo', LastAnswer = IntToStr(mrNo), LastAnswer);
 
@@ -216,11 +244,49 @@ begin
   Check('and to its top', Strip('TInfoBarStrip').Top = 0, IntToStr(Strip('TInfoBarStrip').Top));
   Bar.Hide;
 
+  // several stack, errors first, oldest first among the rest
+  Bar.Control := nil;
+  Bar.Edge := ieTop;
+  Bar.Show('First.', mtInformation, [mbOK], 'one');
+  Bar.Show('Second.', mtInformation, [mbYes], 'two');
+  Bar.Show('Broken.', mtError, [mbRetry], 'three');
+  Settle;
+  Check('three stack, the error on top', Strips = 'Retry|OK|Yes|', Strips);
+  Check('Count is three', Bar.Count = 3, IntToStr(Bar.Count));
+  // the same key again replaces, it does not add
+  Bar.Show('First, said again.', mtInformation, [mbOK], 'one');
+  Settle;
+  Check('the same key replaces', (Bar.Count = 3) and Bar.Has('one'), IntToStr(Bar.Count));
+  // answering one takes it away and tells which
+  Press('Retry');
+  Check('answered with its key', Rec.LastKey = 'three', Rec.LastKey);
+  Check('two left', Strips = 'OK|Yes|', Strips);
+  // taken back without an answer
+  Bar.Hide('one');
+  Settle;
+  Check('Hide by key', not Bar.Has('one') and (Strips = 'Yes|'), Strips);
+  Bar.Hide;
+  Settle;
+  Check('Hide takes them all', Bar.Count = 0, IntToStr(Bar.Count));
+  // one at a time: the others wait, counted on the strip
+  Bar.MaxVisible := 1;
+  Bar.Show('First.', mtInformation, [mbOK], 'one');
+  Bar.Show('Second.', mtInformation, [mbYes], 'two');
+  Bar.Show('Third.', mtInformation, [mbNo], 'three');
+  Settle;
+  Check('MaxVisible 1 shows one', Strips = 'OK|', Strips);
+  Press('OK');
+  Settle;
+  Check('the next comes up', Strips = 'Yes|', Strips);
+  Bar.Hide;
+  Bar.MaxVisible := 3;
+  Settle;
+
   // a toast comes, waits and goes
   Popup.Duration := 400;
   Popup.Show('Saved.');
   Settle(300);
-  Check('toast shows', Popup.Showing and Strip('TToastStrip').Visible);
+  Check('toast shows', Popup.Showing and (Strip('TToastStrip') <> nil));
   Check('toast is centered on the form',
     Abs(Strip('TToastStrip').Left + Strip('TToastStrip').Width div 2 - Form.ClientWidth div 2) <= 1,
     IntToStr(Strip('TToastStrip').Left));
@@ -228,7 +294,7 @@ begin
     Strip('TToastStrip').Top + Strip('TToastStrip').Height < Form.ClientHeight,
     IntToStr(Strip('TToastStrip').Top));
   Settle(900);
-  Check('toast goes by itself', not Strip('TToastStrip').Visible);
+  Check('toast goes by itself', Strip('TToastStrip') = nil);
 
   // showing again replaces the words and waits again
   Popup.Duration := 600;
@@ -239,7 +305,7 @@ begin
   Check('replaced, not gone', Popup.Showing and (Popup.Text = 'Second.'), Popup.Text);
   Popup.Hide;
   Settle(600);
-  Check('Hide sends it away', not Strip('TToastStrip').Visible);
+  Check('Hide sends it away', Strip('TToastStrip') = nil);
 
   Form.Free;
   Rec.Answers.Free;

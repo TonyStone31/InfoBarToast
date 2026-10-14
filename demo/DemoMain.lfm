@@ -87,7 +87,7 @@ object DemoForm: TDemoForm
       Top = 8
       Width = 128
       AutoSize = True
-      Caption = 'Error at its bottom'
+      Caption = 'Error on the memo'
       TabOrder = 2
       OnClick = ErrorBarButtonClick
     end
