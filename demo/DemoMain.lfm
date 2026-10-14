@@ -1,0 +1,121 @@
+object DemoForm: TDemoForm
+  Left = 10
+  Height = 460
+  Top = 10
+  Width = 760
+  Caption = 'InfoBar and Toast'
+  ClientHeight = 460
+  ClientWidth = 760
+  LCLVersion = '4.99.0.0'
+  object Notes: TListBox
+    Left = 0
+    Height = 412
+    Top = 0
+    Width = 180
+    Align = alLeft
+    Items.Strings = (
+      'notes.md'
+      'todo.md'
+      'ideas.md'
+    )
+    ItemHeight = 0
+    TabOrder = 0
+  end
+  object Splitter: TSplitter
+    Left = 180
+    Height = 412
+    Top = 0
+    Width = 5
+  end
+  object Memo: TMemo
+    Left = 185
+    Height = 412
+    Top = 0
+    Width = 575
+    Align = alClient
+    Lines.Strings = (
+      '# Notes'
+      ''
+      'The bars lie over the edge of the form or of this memo and take its width.'
+      'Drag the splitter while one is up: it follows.'
+      ''
+      'The toasts rise in, wait three seconds and go.'
+      'Hold the mouse on one to keep it.'
+    )
+    ScrollBars = ssAutoBoth
+    TabOrder = 2
+  end
+  object Buttons: TPanel
+    Left = 0
+    Height = 48
+    Top = 412
+    Width = 760
+    Align = alBottom
+    AutoSize = True
+    BevelOuter = bvNone
+    ChildSizing.LeftRightSpacing = 8
+    ChildSizing.TopBottomSpacing = 8
+    ChildSizing.HorizontalSpacing = 6
+    ChildSizing.Layout = cclLeftToRightThenTopToBottom
+    ChildSizing.ControlsPerLine = 4
+    ClientHeight = 48
+    ClientWidth = 760
+    TabOrder = 3
+    object FormBarButton: TButton
+      Left = 8
+      Height = 32
+      Top = 8
+      Width = 108
+      AutoSize = True
+      Caption = 'Bar on the form'
+      TabOrder = 0
+      OnClick = FormBarButtonClick
+    end
+    object MemoBarButton: TButton
+      Left = 122
+      Height = 32
+      Top = 8
+      Width = 112
+      AutoSize = True
+      Caption = 'Bar on the memo'
+      TabOrder = 1
+      OnClick = MemoBarButtonClick
+    end
+    object ErrorBarButton: TButton
+      Left = 240
+      Height = 32
+      Top = 8
+      Width = 128
+      AutoSize = True
+      Caption = 'Error at its bottom'
+      TabOrder = 2
+      OnClick = ErrorBarButtonClick
+    end
+    object UndoToastButton: TButton
+      Left = 436
+      Height = 32
+      Top = 8
+      Width = 118
+      AutoSize = True
+      Caption = 'Toast with Undo'
+      TabOrder = 3
+      OnClick = UndoToastButtonClick
+    end
+  end
+  object FormBar: TInfoBar
+    OnAnswer = FormBarAnswer
+    Left = 232
+    Top = 120
+  end
+  object MemoBar: TInfoBar
+    Control = Memo
+    OnAnswer = MemoBarAnswer
+    Left = 336
+    Top = 120
+  end
+  object Toast: TToast
+    OnAction = ToastAction
+    Left = 440
+    Top = 120
+  end
+end
