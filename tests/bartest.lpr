@@ -268,6 +268,17 @@ begin
   Bar.Hide;
   Settle;
   Check('Hide takes them all', Bar.Count = 0, IntToStr(Bar.Count));
+  Bar.ShowQuestion('Load the changed document?', mtWarning,
+    [mrYes, '&Reload', mrNo, '&Keep mine'], 'reload');
+  Settle;
+  Bar.ShowQuestion('The document changed again.', mtWarning,
+    [mrYes, '&Reload latest', mrNo, '&Keep mine'], 'reload');
+  Settle;
+  Check('replacing a two-button question keeps one message', Bar.Count = 1, IntToStr(Bar.Count));
+  Check('replacement refreshes both captions', (Button('Reload latest') <> nil) and
+    (Button('Keep mine') <> nil));
+  Bar.Hide('reload');
+  Settle;
   // one at a time: the others wait, counted on the strip
   Bar.MaxVisible := 1;
   Bar.Show('First.', mtInformation, [mbOK], 'one');

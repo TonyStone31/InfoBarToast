@@ -213,22 +213,28 @@ var
   Msg: TInfoBarMessage;
 begin
   Msg := TInfoBarMessage(FMsg);
-  for I := 0 to High(FButtonControls) do
-    FButtonControls[I].Free;
-  SetLength(FButtonControls, Length(Msg.Answers));
-  FCloseButton.Visible := FBar.ShowCloseButton;
-  FCloseButton.Width := Canvas.TextHeight('Xg') + Scale96ToFont(Gap);
-  FCloseButton.Height := FCloseButton.Width;
-  for I := 0 to High(Msg.Answers) do
-  begin
-    FButtonControls[I] := TButton.Create(Self);
-    // No accelerators: a strip that stays up must not take Alt+letter from
-    // the window.  LibreOffice's info bars have none either.
-    FButtonControls[I].Caption := StringReplace(StripHotkey(Msg.Captions[I]), '&', '&&', [rfReplaceAll]);
-    // the answer goes in Tag: a ModalResult would close a modal form
-    FButtonControls[I].Tag := Msg.Answers[I];
-    FButtonControls[I].OnClick := @ButtonClick;
-    FButtonControls[I].Parent := Self;
+  // Removing a child can realign the strip; its button array must be complete.
+  DisableAlign;
+  try
+    for I := 0 to High(FButtonControls) do
+      FreeAndNil(FButtonControls[I]);
+    SetLength(FButtonControls, Length(Msg.Answers));
+    FCloseButton.Visible := FBar.ShowCloseButton;
+    FCloseButton.Width := Canvas.TextHeight('Xg') + Scale96ToFont(Gap);
+    FCloseButton.Height := FCloseButton.Width;
+    for I := 0 to High(Msg.Answers) do
+    begin
+      FButtonControls[I] := TButton.Create(Self);
+      // No accelerators: a strip that stays up must not take Alt+letter from
+      // the window.  LibreOffice's info bars have none either.
+      FButtonControls[I].Caption := StringReplace(StripHotkey(Msg.Captions[I]), '&', '&&', [rfReplaceAll]);
+      // the answer goes in Tag: a ModalResult would close a modal form
+      FButtonControls[I].Tag := Msg.Answers[I];
+      FButtonControls[I].OnClick := @ButtonClick;
+      FButtonControls[I].Parent := Self;
+    end;
+  finally
+    EnableAlign;
   end;
   UpdateHeight;
   ReAlign;
