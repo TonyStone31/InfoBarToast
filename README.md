@@ -23,7 +23,8 @@ procedure TForm1.InfoBar1Answer(Sender: TObject; const Key: string; Answer: TMod
 
 `OnAnswer` receives the message's key and the `ModalResult` that MessageDlg
 would have returned. A button click takes the message away, except Help,
-which passes `mrNone` and leaves it up. The close button passes `mrClose`. The buttons
+which passes `mrNone` and leaves it up. The close button passes `mrClose`.
+`OnAnswer` runs after the click has finished, so it can show a modal dialog. The buttons
 have no Alt+letter accelerators, as in LibreOffice's info bars, so a bar that
 stays up never takes a key from the window.
 

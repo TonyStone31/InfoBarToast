@@ -40,6 +40,7 @@ type
     FMaxVisible: integer;
     FMessages: TFPList;  // TInfoBarMessage, in the order shown
     FNextSeq: integer;
+    FPending: TStringList; // answers not yet handed on: the key, the answer as its object
     FShowCloseButton: boolean;
     FText: string;
     FOnAnswer: TInfoBarAnswerEvent;
@@ -52,6 +53,7 @@ type
     procedure Add(const AMsg: string; AKind: TMsgDlgType; const Answers: array of TModalResult; const Captions: array of string; const AKey: string);
     procedure Remove(Index: integer);
     procedure Relayout;
+    procedure AnswerLater(Data: PtrInt);
   protected
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     function AccentColor(AKind: TMsgDlgType): TColor; virtual;
@@ -91,7 +93,8 @@ type
     property Text: string read FText write FText;
     // A button's ModalResult, or mrClose for the close button, with the
     // message's key.  The message is gone already, except for Help
-    // (mrNone), which leaves it up as a dialog would.
+    // (mrNone), which leaves it up as a dialog would.  It comes after the
+    // click is over, so it may show a modal dialog.
     property OnAnswer: TInfoBarAnswerEvent read FOnAnswer write FOnAnswer;
   end;
 
@@ -454,6 +457,7 @@ begin
   FKind := mtInformation;
   FMaxVisible := 3;
   FMessages := TFPList.Create;
+  FPending := TStringList.Create;
   FShowCloseButton := True;
 end;
 
@@ -465,6 +469,8 @@ begin
   for I := 0 to FMessages.Count - 1 do
     TInfoBarMessage(FMessages[I]).Free;
   FreeAndNil(FMessages);
+  Application.RemoveAsyncCalls(Self);
+  FreeAndNil(FPending);
   inherited Destroy;
 end;
 
@@ -764,6 +770,21 @@ begin
       if (FFocus <> nil) and FFocus.CanFocus then FFocus.SetFocus
       else if (FControl is TWinControl) and TWinControl(FControl).CanFocus then TWinControl(FControl).SetFocus;
   end;
+  // Not from inside the click: a modal dialog in OnAnswer lets the strip be
+  // freed, and GTK3 still has the mouse-up to deliver to its button.
+  FPending.AddObject(Key, TObject(PtrInt(Answer)));
+  Application.QueueAsyncCall(@AnswerLater, 0);
+end;
+
+procedure TInfoBar.AnswerLater(Data: PtrInt);
+var
+  Key: string;
+  Answer: TModalResult;
+begin
+  if FPending.Count = 0 then Exit;
+  Key := FPending[0];
+  Answer := TModalResult(PtrInt(FPending.Objects[0]));
+  FPending.Delete(0);
   DoAnswer(Key, Answer);
 end;
 
